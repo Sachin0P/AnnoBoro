@@ -34,10 +34,14 @@ class Annotator:
         yolo_results = []
         for r in results:
             for box in r.boxes:
-                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                conf = float(box.conf[0])
+                if conf < self.conf_threshold:
+                    continue
                 cls_id = int(box.cls[0])
                 cls_name = self.yolo.names[cls_id]
-                conf = float(box.conf[0])
+                if cls_name == "person":
+                    continue
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                 yolo_results.append({
                     "bbox": [x1, y1, x2, y2],
                     "class": cls_name,
