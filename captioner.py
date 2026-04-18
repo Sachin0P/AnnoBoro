@@ -7,7 +7,12 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 
 class Captioner:
     def __init__(self, model_name: str = "Salesforce/blip-image-captioning-base"):
-        self.device = "mps" if torch.backends.mps.is_available() else "cpu"
+        if torch.backends.mps.is_available():
+            self.device = "mps"
+        elif torch.cuda.is_available():
+            self.device = "cuda"
+        else:
+            self.device = "cpu"
         print(f"[Captioner] Loading BLIP on device: {self.device}")
         self.processor = BlipProcessor.from_pretrained(model_name)
         self.model = BlipForConditionalGeneration.from_pretrained(model_name).to(self.device)

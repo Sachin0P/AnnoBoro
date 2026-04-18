@@ -15,6 +15,7 @@ annoboro takes a first-person (GoPro / phone) video of a domestic task and produ
 - **Rendered overlay** — action banner at top, caption at bottom, timestamp on every frame
 - **JSON sidecar** — per-segment objects detected, hand-object contact pairs, captions, and timestamps
 - **Apple Silicon native** — runs entirely on MPS (Metal Performance Shaders); no CUDA required
+- **Windows compatible** — runs on CPU or NVIDIA GPU (CUDA) on Windows 10/11
 
 ---
 
@@ -70,22 +71,29 @@ For each input video the pipeline writes two files:
 ## Setup
 
 ### Requirements
-- macOS with Apple Silicon (M1 / M2 / M3 / M4 / M5)
-- Python 3.10+
-- Homebrew
 
-### 1. Install FFmpeg
+| | macOS (Apple Silicon) | Windows 10/11 |
+|---|---|---|
+| Python | 3.10+ | 3.10+ |
+| Package manager | Homebrew | winget or manual |
+| Accelerator | MPS (built into PyTorch) | CUDA (optional) or CPU |
+
+---
+
+### macOS (Apple Silicon — M1 / M2 / M3 / M4 / M5)
+
+#### 1. Install FFmpeg
 ```bash
 brew install ffmpeg
 ```
 
-### 2. Create a virtual environment
+#### 2. Create a virtual environment
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+#### 3. Install dependencies
 ```bash
 pip install --upgrade pip
 pip install torch torchvision
@@ -93,26 +101,74 @@ pip install "transformers>=4.35.0,<5.0.0"
 pip install ultralytics mediapipe opencv-python Pillow tqdm
 ```
 
+---
+
+### Windows 10 / 11
+
+#### 1. Install Python 3.10+
+Download and install from [python.org](https://www.python.org/downloads/). Check **"Add Python to PATH"** during setup.
+
+#### 2. Install FFmpeg
+
+**Option A — winget (recommended):**
+```powershell
+winget install Gyan.FFmpeg
+```
+
+**Option B — manual:**
+1. Download a build from [ffmpeg.org/download.html](https://ffmpeg.org/download.html) (e.g. the gyan.dev full build)
+2. Extract to `C:\ffmpeg`
+3. Add `C:\ffmpeg\bin` to your system `PATH` environment variable
+
+Verify: open a new terminal and run `ffmpeg -version`.
+
+#### 3. Create a virtual environment
+```powershell
+python -m venv venv
+venv\Scripts\activate
+```
+
+#### 4. Install PyTorch
+
+**CPU only:**
+```powershell
+pip install torch torchvision
+```
+
+**NVIDIA GPU (CUDA 12.1):**
+```powershell
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
+
+#### 5. Install remaining dependencies
+```powershell
+pip install "transformers>=4.35.0,<5.0.0"
+pip install ultralytics mediapipe opencv-python Pillow tqdm
+```
+
 Or via requirements.txt:
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-> **Note:** `transformers` must be pinned to `<5.0.0`. Transformers 5.x changes the generation API in a way that breaks BLIP loading on the first run.
+> **Note:** `transformers` must be pinned to `<5.0.0`. Transformers 5.x changes the generation API in a way that breaks BLIP on first run.
 
 ---
 
 ## Usage
 
+**macOS:**
 ```bash
-# Activate venv (required every new terminal session)
 source venv/bin/activate
-
-# Run the pipeline
 python pipeline.py --input path/to/video.mp4 --action chopping
-
-# Custom output path
 python pipeline.py --input video.mp4 --action cooking --output results/annotated.mp4
+```
+
+**Windows:**
+```powershell
+venv\Scripts\activate
+python pipeline.py --input path\to\video.mp4 --action chopping
+python pipeline.py --input video.mp4 --action cooking --output results\annotated.mp4
 ```
 
 ### Arguments
@@ -186,4 +242,4 @@ roboannotate/
 - On first run, YOLOv8n (~6 MB) and `hand_landmarker.task` (~1 MB) are downloaded automatically; BLIP weights (~990 MB) are downloaded from HuggingFace and cached in `~/.cache/huggingface/`.
 - All subsequent runs use the local cache — no re-download.
 - The `NORM_RECT without IMAGE_DIMENSIONS` warning from MediaPipe is cosmetic and does not affect results.
-- CUDA is never referenced; the device selection is: `"mps" if torch.backends.mps.is_available() else "cpu"`.
+- On macOS the device is `mps`; on Windows with a CUDA GPU it is `cuda`; otherwise `cpu`. Device is selected automatically at runtime.
